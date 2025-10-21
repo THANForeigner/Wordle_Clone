@@ -1,4 +1,6 @@
 from src.logic import Logic
+from src.popup import PopUpWarning, PopUpWindow
+import asyncio
 import flet as ft
 import os
 import sys
@@ -19,50 +21,6 @@ HINTS_COLORS = {
 }
 
 DEFAULT_KEY_COLOR = ft.Colors.BLUE_GREY_600
-
-class PopUpWindow (ft.Container):
-    def __init__ (self, title: str, message: str, on_restart, on_close):
-        super().__init__(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Text(title, size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"),
-                        ft.Text(message, size=24, color=ft.Colors.WHITE, font_family="default"), 
-                        ft.Row(
-                            controls=[
-                                ft.TextButton("Play Again", on_click=on_restart),
-                                ft.TextButton("Close", on_click=on_close),
-                            ],
-                            alignment=ft.MainAxisAlignment.END,
-                        ),
-                    ],
-                    spacing=15,
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                ),
-                width=350,
-                height=200, 
-                padding=20,
-                border_radius=10,
-                bgcolor=ft.Colors.GREY_800,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.Colors.with_opacity(0.5, ft.Colors.BLACK),
-                    offset=ft.Offset(0, 0),
-                    blur_style=ft.ShadowBlurStyle.OUTER,
-                ),
-            ),
-            alignment=ft.alignment.center,
-            bgcolor=ft.Colors.with_opacity(0.8, ft.Colors.BLACK),
-            expand=True,
-            visible=False,
-        )
-        self.title_control = self.content.content.controls[0]
-        self.message_control = self.content.content.controls[1]
-        
-    def update_content(self, title: str, message: str):
-        self.title_control.value = title
-        self.message_control.value = message
 
 def get_asset_path(relative_path: str) -> str:
     try:
@@ -97,10 +55,16 @@ class Wordle:
         self.key_statuses = {key: DEFAULT_KEY_COLOR for row in KEYBOARD_LAYOUT for key in row}
         
         self.game_over_window = PopUpWindow(
-            title="Game Over",
+            title="",
             message="",
             on_restart=self.restart_game_and_close_window,
             on_close=self.close_game_over_window
+        )
+        
+        self.game_warning_window = PopUpWarning (
+            title = "Warning",
+            message = "",
+            on_close=self.close_warning_window
         )
         
         self.main_content = self.create_main_content()
@@ -110,6 +74,7 @@ class Wordle:
             self.main_content_column
         )
         self.page.overlay.append(self.game_over_window)
+        self.page.overlay.append(self.game_warning_window)
         self.draw_ui()
     
     def create_board_controls(self):
@@ -221,6 +186,8 @@ class Wordle:
         return key_container
     
     def on_keyboard_event(self, e: ft.KeyboardEvent):
+        if self.game_over or self.game_warning_window.visible or self.game_over_window.visible:
+            return
         key = e.key.upper()
         if not self.game_over: 
             if key in KEYBOARD_LAYOUT[0] + KEYBOARD_LAYOUT[1] + KEYBOARD_LAYOUT[2]:
@@ -231,6 +198,8 @@ class Wordle:
                 self.update_ui("key_press", "BACKSPACE")
 
     def handle_key_press(self, e: ft.ControlEvent):
+        if self.game_over or self.game_warning_window.visible or self.game_over_window.visible:
+            return
         key = e.control.data
         if not self.game_over:
             self.update_ui("key_press", key)
@@ -306,28 +275,24 @@ class Wordle:
 
         if not submitted:
             current_word = self.wordle_logic.get_current_word()
-            message = ""
             if len(current_word) < WORD_LENGTH:
-                 message = "NOT ENOUGH LETTERS!"
+                self.show_warning_dialog("NOT ENOUGH LETTERS!")
             else:
-                 message = "NOT IN WORD LIST!" 
-
-            self.page.snack_bar = ft.SnackBar(ft.Text(message), open = True)
-            self.page.update() 
+                self.show_warning_dialog("WORD NOT FOUND!")
             return
-
-        guess_word = self.wordle_logic.history[-1][0]
-        for i, (letter, hint) in enumerate( zip ( guess_word, hints ) ):
-            flet_color = HINTS_COLORS.get(hint, DEFAULT_KEY_COLOR)
-            current_color = self.key_statuses.get(letter)
-            if current_color == HINTS_COLORS[1]: 
-                continue
-            if flet_color == HINTS_COLORS[1]: 
-                self.key_statuses[letter] = flet_color
-            elif flet_color == HINTS_COLORS[2] and current_color != HINTS_COLORS[1]:
-                 self.key_statuses[letter] = flet_color
-            elif flet_color == HINTS_COLORS[3] and current_color not in (HINTS_COLORS[1], HINTS_COLORS[2]): 
-                self.key_statuses[letter] = flet_color
+        else:
+            guess_word = self.wordle_logic.history[-1][0]
+            for i, (letter, hint) in enumerate( zip ( guess_word, hints ) ):
+                flet_color = HINTS_COLORS.get(hint, DEFAULT_KEY_COLOR)
+                current_color = self.key_statuses.get(letter)
+                if current_color == HINTS_COLORS[1]: 
+                    continue
+                if flet_color == HINTS_COLORS[1]: 
+                    self.key_statuses[letter] = flet_color
+                elif flet_color == HINTS_COLORS[2] and current_color != HINTS_COLORS[1]:
+                    self.key_statuses[letter] = flet_color
+                elif flet_color == HINTS_COLORS[3] and current_color not in (HINTS_COLORS[1], HINTS_COLORS[2]): 
+                    self.key_statuses[letter] = flet_color
 
         self.sync_ui_state_with_logic()
         self.update_board_display()
@@ -336,14 +301,14 @@ class Wordle:
         if is_win:
             self.game_over = True
             self.win = True
-            self.show_game_over_dialog("You Win!", f"Congratulations! You guessed the word in {len(self.wordle_logic.history)}/6 tries.")
+            self.show_game_over_dialog("You Win!", f"Congratulations! You guessed the word in {len(self.wordle_logic.history)}/6 tries.", ft.Colors.GREEN_400)
         elif len(self.wordle_logic.history) >= MAX_GUESS:
             self.game_over = True
-            self.show_game_over_dialog("Game Over", f"You ran out of guesses! The word was **{self.wordle_logic.answer}**.")
+            self.show_game_over_dialog("Game Over", f"You ran out of guesses! The word was **{self.wordle_logic.answer}**.", ft.Colors.YELLOW_400)
         else:
             self.page.update()
             
-    def restart_game_and_close_window(self, e):
+    def restart_game_and_close_window(self, e = None):
         self.wordle_logic = Logic(file_path=self.json_file_path)
         self.current_guess_row = 0
         self.current_guess_col = 0
@@ -358,11 +323,33 @@ class Wordle:
         self.page.update()
 
 
-    def close_game_over_window(self, e):
+    def close_game_over_window(self, e=None):
         self.game_over_window.visible = False
         self.page.update()
 
-    def show_game_over_dialog(self, title: str, message: str):
-        self.game_over_window.update_content(title, message)
+    def show_game_over_dialog(self, title: str, message: str, color: ft.Colors):
+        self.game_over_window.update_content(title, message, color)
         self.game_over_window.visible = True
         self.page.update()
+        async def auto_fade():
+            await asyncio.sleep(3)
+            if self.game_over_window.visible:
+                self.restart_game_and_close_window()
+                await self.page.update()
+        self.page.run_task(auto_fade)
+    
+    def close_warning_window(self, e=None):
+        self.game_warning_window.visible = False
+        self.page.update()
+
+    def show_warning_dialog(self, message: str):
+        self.game_warning_window.update_content(message)
+        self.game_warning_window.visible = True
+        self.page.update()
+
+        async def auto_fade():
+            await asyncio.sleep(2)
+            if self.game_warning_window.visible:
+                self.game_warning_window.visible = False
+                await self.page.update()
+        self.page.run_task(auto_fade)
