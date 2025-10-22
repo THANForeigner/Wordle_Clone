@@ -39,7 +39,9 @@ class GridBoard:
                         alignment=ft.alignment.center,
                         border_radius=3, 
                         border=ft.border.all(2, ft.Colors.GREY_700), 
-                        data={"row": r, "col": c}
+                        data={"row": r, "col": c},
+                        scale=ft.Scale(scale=1),
+                        animate_scale=ft.Animation(100, ft.AnimationCurve.EASE_OUT),
                     )
                     row_controls.append(box_container)
                 self.board_controls.append(ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=row_controls, spacing=5))
@@ -56,6 +58,7 @@ class GridBoard:
                 box = row_controls[c]
                 text_field_control = box.content 
                 text_field_control.value = guesses[r][c]
+                box.scale.scale = 1.0
                 box.bgcolor = ft.Colors.BLACK
                 box.border = ft.border.all(2, ft.Colors.GREY_700)
                 text_field_control.text_style.color = ft.Colors.WHITE
@@ -73,7 +76,52 @@ class GridBoard:
                     else:
                         text_field_control.text_style.color = ft.Colors.WHITE
                 elif r == row:
-                    if c < col:
+                    if c < letter_col: 
                         box.border = ft.border.all(2, ft.Colors.GREY_500)
-                    elif c == letter_col and not game_over:
+                        if c == letter_col - 1 and not game_over:
+                            box.scale.scale = 1.1
+                    elif c == letter_col and not game_over: 
                         box.border = ft.border.all(2, ft.Colors.WHITE)
+                        
+    async def animate_row_flip(self, row_index: int, hints: list, word: list):
+        row_controls = self.board_controls[row_index].controls
+        for c in range(WORD_LENGTH):
+            box = row_controls[c]
+            
+            # 1. "Pop" animation (Scale up)
+            box.scale.scale = 1.1
+            box.update()
+            await asyncio.sleep(0.1) 
+
+            # 2. Change color and text mid-animation
+            color = HINTS_COLORS.get(hints[c], ft.Colors.BLACK)
+            box.bgcolor = color
+            box.border = ft.border.all(2, color)
+            text_field = box.content
+            text_field.value = word[c]
+            text_field.bgcolor = color
+            if color == HINTS_COLORS[2]: # Yellow
+                text_field.text_style.color = ft.Colors.BLACK
+            else:
+                text_field.text_style.color = ft.Colors.WHITE
+            
+            # 3. "Pop" animation (Scale down)
+            box.scale.scale = 1.0
+            box.update()
+            
+            # Stagger the reveal of the next letter
+            await asyncio.sleep(0.2)
+
+    def reset(self):
+        for r in range(MAX_GUESS):
+            row_controls = self.board_controls[r].controls
+            for c in range(WORD_LENGTH):
+                box = row_controls[c]
+                text_field = box.content
+                text_field.value = ""
+                box.bgcolor = ft.Colors.BLACK
+                box.border = ft.border.all(2, ft.Colors.GREY_700)
+                text_field.bgcolor = ft.Colors.BLACK
+                text_field.text_style.color = ft.Colors.WHITE
+                box.scale.scale = 1
+                box.update()

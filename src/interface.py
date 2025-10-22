@@ -36,8 +36,8 @@ class Wordle:
         self.guesses = list[list[str]]
         self.guesses = [[""] * WORD_LENGTH for _ in range(MAX_GUESS)]
         self.keyboard = Keyboard(key_press_handler=self.handle_key_press)
-        self.keyboard_controls = self.keyboard.keyboard_controls
-        self.key_statuses = self.keyboard.key_statuses
+        #self.keyboard_controls = self.keyboard.keyboard_controls
+        #self.key_statuses = self.keyboard.key_statuses
         
         self.game_over_window = PopUpWindow(
             title="",
@@ -61,37 +61,37 @@ class Wordle:
         self.page.overlay.append(self.game_warning_window)
         self.draw_ui()
     
-    def on_keyboard_event(self, e: ft.KeyboardEvent):
+    async def on_keyboard_event(self, e: ft.KeyboardEvent):
         if self.game_over or self.game_warning_window.visible or self.game_over_window.visible:
             return
         key = e.key.upper()
         if not self.game_over: 
             if key in KEYBOARD_LAYOUT[0] + KEYBOARD_LAYOUT[1] + KEYBOARD_LAYOUT[2]:
-                self.update_ui("key_press", key)
+                await self.update_ui("key_press", key)
             elif key == "ENTER":
-                self.update_ui("key_press", "ENTER")
+                await self.update_ui("key_press", "ENTER")
             elif key == "BACKSPACE":
-                self.update_ui("key_press", "BACKSPACE")
+                await self.update_ui("key_press", "BACKSPACE")
 
-    def handle_key_press(self, e: ft.ControlEvent):
+    async def handle_key_press(self, e: ft.ControlEvent):
         if self.game_over or self.game_warning_window.visible or self.game_over_window.visible:
             return
         key = e.control.data
         if not self.game_over:
             self.update_ui("key_press", key)
                 
-    def update_ui(self, action: str, key: str = None):
+    async def update_ui(self, action: str, key: str = None):
         is_input_key = key in KEYBOARD_LAYOUT[0] + KEYBOARD_LAYOUT[1] + KEYBOARD_LAYOUT[2]
         if is_input_key:
             self.wordle_logic.get_letter(key)
         elif key == "BACKSPACE":
             self.wordle_logic.remove_letter()
         elif key == "ENTER":
-            self.submit_answer() 
+            await self.submit_answer() 
             return
         self.sync_ui_state_with_logic()
         self.board.update_board_display(self.wordle_logic.history, self.guesses, self.current_guess_row, self.current_guess_col, self.current_letter_col, self.game_over)
-        self.keyboard.update_keyboard_display()
+        #self.keyboard.update_keyboard_display()
         self.page.update() 
      
     def sync_ui_state_with_logic(self):
@@ -99,15 +99,15 @@ class Wordle:
         for r, (word, hints) in enumerate(self.wordle_logic.history):
             self.guesses[r] = list(word)
         current_word = self.wordle_logic.get_current_word()
-        current_row = len(self.wordle_logic.history)
+        current_row = len(self.wordle_logic.history) #
+
         if current_row < MAX_GUESS:
             self.guesses[current_row][:len(current_word)] = list(current_word)
-            self.current_guess_row = current_row
+            self.current_guess_row = current_row 
             self.current_letter_col = len(current_word)
         else:
-            self.current_guess_row = MAX_GUESS - 1
-            self.current_letter_col = WORD_LENGTH
-            self.game_over = True   
+            self.current_guess_row = current_row 
+            self.current_letter_col = 0 
     
     def create_main_content(self):
         return ft.Column(
@@ -135,61 +135,59 @@ class Wordle:
                    
     def draw_ui(self):
         self.board.update_board_display(self.wordle_logic.history, self.guesses, self.current_guess_row, self.current_guess_col, self.current_letter_col, self.game_over)
-        self.keyboard.update_keyboard_display()   
+        #self.keyboard.update_keyboard_display()   
         self.page.update()
         
-    def submit_answer(self):
-        hints, is_win, submitted = self.wordle_logic.submit_guess()
+    async def submit_answer(self): # Made async
+            hints, is_win, submitted = self.wordle_logic.submit_guess()
 
-        if not submitted:
-            current_word = self.wordle_logic.get_current_word()
-            if len(current_word) < WORD_LENGTH:
-                self.show_warning_dialog("NOT ENOUGH LETTERS!")
+            if not submitted:
+                current_word = self.wordle_logic.get_current_word()
+                if len(current_word) < WORD_LENGTH:
+                    self.show_warning_dialog("NOT ENOUGH LETTERS!")
+                else:
+                    self.show_warning_dialog("WORD NOT FOUND!")
+                return
             else:
-                self.show_warning_dialog("WORD NOT FOUND!")
-            return
-        else:
-            guess_word = self.wordle_logic.history[-1][0]
-            for i, (letter, hint) in enumerate( zip ( guess_word, hints ) ):
-                flet_color = HINTS_COLORS.get(hint, DEFAULT_KEY_COLOR)
-                current_color = self.key_statuses.get(letter)
-                if current_color == HINTS_COLORS[1]: 
-                    continue
-                if flet_color == HINTS_COLORS[1]: 
-                    self.key_statuses[letter] = flet_color
-                elif flet_color == HINTS_COLORS[2] and current_color != HINTS_COLORS[1]:
-                    self.key_statuses[letter] = flet_color
-                elif flet_color == HINTS_COLORS[3] and current_color not in (HINTS_COLORS[1], HINTS_COLORS[2]): 
-                    self.key_statuses[letter] = flet_color
-
-        self.sync_ui_state_with_logic()
-        self.board.update_board_display(self.wordle_logic.history, self.guesses, self.current_guess_row, self.current_guess_col, self.current_letter_col, self.game_over)
-        self.keyboard.update_keyboard_display()
-        
-        if is_win:
-            self.game_over = True
-            self.win = True
-            self.show_game_over_dialog("You Win!", f"Congratulations! You guessed the word in {len(self.wordle_logic.history)}/6 tries.", ft.Colors.GREEN_400)
-        elif len(self.wordle_logic.history) >= MAX_GUESS:
-            self.game_over = True
-            self.show_game_over_dialog("Game Over", f"You ran out of guesses! The word was **{self.wordle_logic.answer}**.", ft.Colors.YELLOW_400)
-        else:
-            self.page.update()
+                guess_word = self.wordle_logic.history[-1][0]
+                self.sync_ui_state_with_logic()
+                await self.board.animate_row_flip(self.current_guess_row - 1, hints, list(guess_word))
+                colors_and_chars = []
+                for i, (letter, hint) in enumerate( zip ( guess_word, hints ) ):
+                    key_color = HINTS_COLORS.get(hint)
+                    if key_color:
+                        colors_and_chars.append((key_color, letter.upper()))
+                self.keyboard.setAnswerState(colors_and_chars)
+            if is_win:
+                self.game_over = True
+                self.win = True
+                self.show_game_over_dialog("You Win!", f"Congratulations! You guessed the word in {len(self.wordle_logic.history)}/6 tries.", ft.Colors.GREEN_400)
+            elif len(self.wordle_logic.history) >= MAX_GUESS:
+                self.game_over = True
+                self.show_game_over_dialog("Game Over", f"You ran out of guesses! The word was **{self.wordle_logic.answer}**.", ft.Colors.YELLOW_400)
+            else:
+                self.page.update()
             
     def restart_game_and_close_window(self, e = None):
-        self.wordle_logic = Logic(file_path=self.json_file_path)
-        self.current_guess_row = 0
-        self.current_guess_col = 0
-        self.current_letter_col = 0
-        self.guesses = [[""] * WORD_LENGTH for _ in range(MAX_GUESS)]
-        self.keyboard.key_statuses={key: DEFAULT_KEY_COLOR for row in KEYBOARD_LAYOUT for key in row}
-        self.key_statuses = self.keyboard.key_statuses
-        self.game_over = False
-        self.win = False
-        self.close_game_over_window(e) 
-        self.board.update_board_display(self.wordle_logic.history, self.guesses, self.current_guess_row, self.current_guess_col, self.current_letter_col, self.game_over)
-        self.keyboard.update_keyboard_display()
-        self.page.update()
+            self.wordle_logic = Logic(file_path=self.json_file_path)
+            self.current_guess_row = 0
+            self.current_guess_col = 0
+            self.current_letter_col = 0
+            self.guesses = [[""] * WORD_LENGTH for _ in range(MAX_GUESS)]
+            self.game_over = False
+            self.win = False
+            self.keyboard.reset() 
+            self.board.reset() 
+            self.close_game_over_window(e) 
+            self.board.update_board_display(
+                self.wordle_logic.history, 
+                self.guesses, 
+                self.current_guess_row, 
+                self.current_guess_col, 
+                self.current_letter_col, 
+                self.game_over
+            )
+            self.page.update()
 
 
     def close_game_over_window(self, e=None):
@@ -204,7 +202,7 @@ class Wordle:
             await asyncio.sleep(3)
             if self.game_over_window.visible:
                 self.restart_game_and_close_window()
-                await self.page.update()
+                self.page.update()
         self.page.run_task(auto_fade)
     
     def close_warning_window(self, e=None):
@@ -220,5 +218,5 @@ class Wordle:
             await asyncio.sleep(2)
             if self.game_warning_window.visible:
                 self.game_warning_window.visible = False
-                await self.page.update()
+                self.page.update()
         self.page.run_task(auto_fade)
