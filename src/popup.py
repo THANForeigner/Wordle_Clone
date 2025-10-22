@@ -9,7 +9,7 @@ class PopUpWindow (ft.Container):
                 content=ft.Column(
                     controls=[
                         ft.Text(title, size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"),
-                        ft.SelectionArea(content=ft.Text(message, size=24, color=ft.Colors.WHITE, font_family="default")), 
+                        ft.Text(message, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"),
                         ft.Row(
                             controls=[
                                 ft.TextButton(

@@ -14,7 +14,9 @@ class Logic:
     
     @staticmethod
     def get_hidden_word(word_list: list) -> str:
-        return random.choice(word_list).upper()
+        word=random.choice(word_list).upper()
+        print(f"{word}")
+        return word
     
     def __init__ (self, file_path: str):
         self.word_list = self.load_data(file_path)
