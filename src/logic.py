@@ -7,13 +7,13 @@ PRESENT = 2
 ABSENT = 3
 
 class Logic:
+
     def load_data(self,file_path: str):
         file = open(file_path,"r")
         data=json.load(file)
         return data
     
-    @staticmethod
-    def get_hidden_word(word_list: list) -> str:
+    def get_hidden_word(self,word_list: list) -> str:
         word=random.choice(word_list).upper()
         print(f"{word}")
         return word

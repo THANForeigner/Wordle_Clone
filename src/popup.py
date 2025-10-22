@@ -1,6 +1,4 @@
 import flet as ft
-
-
 class PopUpWindow (ft.Container):
     def __init__ (self, title: str, message: str, on_restart, on_close):
         self.dialog_color = ft.Colors.BLACK 
@@ -8,16 +6,16 @@ class PopUpWindow (ft.Container):
             content=ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Text(title, size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"),
-                        ft.Text(message, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"),
+                        ft.Text(title, size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.BLACK, font_family="default"),
+                        ft.Text(message, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.BLACK, font_family="default"),
                         ft.Row(
                             controls=[
                                 ft.TextButton(
-                                    content=ft.Text("Play Again", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"), 
+                                    content=ft.Text("Play Again", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.BLACK, font_family="default"), 
                                     on_click=on_restart
                                 ),
                                 ft.TextButton(
-                                    content=ft.Text("Close", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, font_family="default"), 
+                                    content=ft.Text("Close", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.BLACK, font_family="default"), 
                                     on_click=on_close
                                 ),
                             ],
@@ -105,3 +103,4 @@ class PopUpWarning (ft.Container):
     
     def update_content(self,message: str):
         self.message_control.value = message
+  
