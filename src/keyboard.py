@@ -14,7 +14,6 @@ class Keyboard:
     def __init__(self, key_press_handler):
         self.key_press_handler = key_press_handler 
         self.keyboard_controls = {}
-        #self.key_statuses = {key: DEFAULT_KEY_COLOR for row in KEYBOARD_LAYOUT for key in row}
     
     def create_keyboard_controls(self):
         keyboard_rows = []
@@ -41,7 +40,7 @@ class Keyboard:
         special_keys_row_controls = []
         special_keys_row_controls.append(self.create_special_key("ENTER", 60, text="ENTER"))
         special_keys_row_controls.extend(keyboard_rows.pop().controls) # Add Z-M keys
-        special_keys_row_controls.append(self.create_special_key("BACKSPACE", 60, text="BACKSPACE"))
+        special_keys_row_controls.append(self.create_special_key("BACKSPACE", 60, text="⌫"))
         keyboard_rows.append(ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=special_keys_row_controls, spacing=5))
         return keyboard_rows  
     
@@ -60,7 +59,7 @@ class Keyboard:
         self.keyboard_controls[key_name] = key_container
         return key_container
     
-    def setAnswerState(self, lst: list[tuple[str, str]]):
+    def set_answer_state(self, lst: list[tuple[str, str]]):
         for (boxColor, char) in lst:
             char_upper = char.upper() 
             t = self.keyboard_controls.get(char_upper)

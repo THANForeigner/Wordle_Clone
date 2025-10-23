@@ -151,13 +151,13 @@ class Wordle:
             else:
                 guess_word = self.wordle_logic.history[-1][0]
                 self.sync_ui_state_with_logic()
-                await self.board.animate_row_flip(self.current_guess_row - 1, hints, list(guess_word))
+                await self.board.animate_row_bouncing(self.current_guess_row - 1, hints, list(guess_word))
                 colors_and_chars = []
                 for i, (letter, hint) in enumerate( zip ( guess_word, hints ) ):
                     key_color = HINTS_COLORS.get(hint)
                     if key_color:
                         colors_and_chars.append((key_color, letter.upper()))
-                self.keyboard.setAnswerState(colors_and_chars)
+                self.keyboard.set_answer_state(colors_and_chars)
             if is_win:
                 self.game_over = True
                 self.win = True
