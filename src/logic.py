@@ -15,7 +15,6 @@ class Logic:
     
     def get_hidden_word(self,word_list: list) -> str:
         word=random.choice(word_list).upper()
-        print(f"{word}")
         return word
     
     def __init__ (self, file_path: str):
